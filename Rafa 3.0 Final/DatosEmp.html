@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Mi Aplicación Móvil</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.js"></script>
+</head>
+
+<body>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: rgb(104, 25, 141);
+        }
+
+        form {
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        label {
+            display: block;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        /* Estilo para la tabla */
+        table {
+            width: 50%;
+            border-collapse: auto;
+            margin: 10px auto;
+        }
+
+        /* Resto de estilos (sin cambios) */
+        th {
+            background-color: #007bff;
+            color: #fff;
+            padding: 3px;
+            text-align: center;
+            width: 20%;
+        }
+
+        tr:nth-child(even) {
+            background-color: #bebebe;
+        }
+
+        td {
+            padding: 8px;
+            text-align: left;
+            width: 20%;
+        }
+
+        button {
+            padding: 5px 10px;
+            background-color: #007bff;
+            color: #ffffff;
+            border: none;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        button.edit {
+            background-color: #ffc107;
+        }
+
+        button.delete {
+            background-color: #dc3545;
+        }
+    </style>
+    <header>
+        <h1>Bienvenido a Mi App Móvil</h1>
+    </header>
+    <main>
+        <section id="inicio">
+            <h2>Página de Inicio</h2>
+            <form id="employeeForm">
+                <label for="employeeName">Nombre:</label>
+                <input type="text" id="employeeName" required>
+                <br>
+                <label for="employeePosition">Puesto:</label>
+                <input type="text" id="employeePosition" required>
+                <br>
+                <label for="employeeStartDate">Fecha de Inicio:</label>
+                <input type="text" id="employeeStartDate" required>
+                <br>
+                <button id="addEmployee">Agregar Empleado</button>
+            </form>
+        </section>
+        <section id="empleados">
+            <h2>Lista de Empleados</h2>
+            <table id="employeeTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Puesto</th>
+                        <th>Fecha de Inicio</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="employeeTbody">
+                    <!-- Aquí se mostrarán los empleados -->
+                </tbody>
+            </table>
+        </section>
+    </main>
+    <script src="https://www.gstatic.com/firebasejs/9.6.3/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.3/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.3/firebase-database.js"></script>
+    <script>
+        /*uso de api de terceros
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "firebase/app";
+        import { getAnalytics } from "firebase/analytics";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+        */
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+            apiKey: "AIzaSyCRimKJaAZahihOHYFEXLoAlTb6Bv5Xb60",
+            authDomain: "base-de-empleados.firebaseapp.com",
+            projectId: "base-de-empleados",
+            storageBucket: "base-de-empleados.appspot.com",
+            messagingSenderId: "54593131227",
+            appId: "1:54593131227:web:8bd832c0e4ddf548c132fe",
+            measurementId: "G-8LMXX08E9P"
+        };
+        document.addEventListener("DOMContentLoaded", function () {
+            const employeeTable = document.getElementById("employeeTable");
+            const employeeTbody = document.getElementById("employeeTbody");
+            const employeeForm = document.getElementById("employeeForm");
+
+            // Datos de empleados (simulación de una base de datos)
+            let employees = [];
+
+            // Función para encriptar un texto
+            function encryptText(text) {
+                const encrypted = CryptoJS.AES.encrypt(text, "clave-secreta").toString();
+                return encrypted;
+            }
+
+            // Función para desencriptar un texto
+            function decryptText(encrypted) {
+                const bytes = CryptoJS.AES.decrypt(encrypted, "clave-secreta");
+                const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
+                return decryptedText;
+            }
+
+            // Función para agregar un empleado
+            function addEmployee(employee) {
+                employees.push(employee);
+                saveEmployeesToLocalStorage();
+            }
+
+            // Función para guardar los empleados en localStorage
+            function saveEmployeesToLocalStorage() {
+                localStorage.setItem('employees', JSON.stringify(employees));
+            }
+
+            // Función para obtener los empleados desde localStorage
+            function getEmployeesFromLocalStorage() {
+                const storedEmployees = localStorage.getItem('employees');
+                if (storedEmployees) {
+                    employees = JSON.parse(storedEmployees);
+                    listEmployees();
+                }
+            }
+
+            // Función para listar empleados
+            function listEmployees() {
+                employeeTbody.innerHTML = "";
+
+                employees.forEach(function (employee, index) {
+                    const row = document.createElement("tr");
+
+                    row.innerHTML = `
+                        <td>${index}</td>
+                        <td>${decryptText(employee.name)}</td>
+                        <td>${decryptText(employee.position)}</td>
+                        <td>${decryptText(employee.startDate)}</td>
+                        <td>
+                            <button class="edit" data-index="${index}">Editar</button>
+                            <button class="delete" data-index="${index}">Eliminar</button>
+                        </td>
+                    `;
+
+                    employeeTbody.appendChild(row);
+                });
+            }
+
+            // Función para limpiar el formulario
+            function clearForm() {
+                document.getElementById("employeeName").value = "";
+                document.getElementById("employeePosition").value = "";
+                document.getElementById("employeeStartDate").value = "";
+            }
+
+            // Agregar evento para agregar empleado
+            document.getElementById("addEmployee").addEventListener("click", function () {
+                const employeeName = document.getElementById("employeeName").value;
+                const employeePosition = document.getElementById("employeePosition").value;
+                const employeeStartDate = document.getElementById("employeeStartDate").value;
+
+                if (employeeName && employeePosition && employeeStartDate) {
+                    const newEmployee = {
+                        name: encryptText(employeeName),
+                        position: encryptText(employeePosition),
+                        startDate: encryptText(employeeStartDate)
+                    };
+
+                    addEmployee(newEmployee);
+                    clearForm();
+                    listEmployees();
+                } else {
+                    alert("Por favor, complete todos los campos.");
+                }
+            });
+
+            // Cuando se cargue la página, obtén los empleados almacenados en localStorage (si los hay)
+            getEmployeesFromLocalStorage();
+        });
+
+    </script>
+</body>
+
+</html>
